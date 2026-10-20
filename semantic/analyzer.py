@@ -16,13 +16,50 @@ from semantic.symbol_table import SymbolTable
 
 
 class SemanticError(Exception):
-    pass
+    def __init__(
+        self,
+        message,
+        error_type="Semantic Error",
+        line=None,
+        column=None,
+        source_context=None,
+    ):
+        self.message = message
+        self.error_type = error_type
+        self.line = line
+        self.column = column
+        self.source_context = source_context
+        super().__init__(message)
 
 
 class SemanticAnalyzer:
 
-    def __init__(self):
+    def __init__(self, node_locations=None, source=None):
         self.symbol_table = SymbolTable()
+        self.node_locations = node_locations or {}
+        self.source = source
+
+    def semantic_error(self, message, error_type, node=None):
+        token = self.node_locations.get(id(node)) if node is not None else None
+        source_context = None
+
+        if token is not None and self.source is not None:
+            lines = self.source.split("\n")
+            if 1 <= token.line <= len(lines):
+                source_line = lines[token.line - 1].rstrip("\r")
+                prefix = source_line[:max(token.column - 1, 0)]
+                source_context = (
+                    f"{source_line.expandtabs(4)}\n"
+                    f"{' ' * len(prefix.expandtabs(4))}^"
+                )
+
+        raise SemanticError(
+            message,
+            error_type=error_type,
+            line=token.line if token is not None else None,
+            column=token.column if token is not None else None,
+            source_context=source_context,
+        )
 
     def analyze(self, program):
         self.visit(program)
@@ -68,7 +105,8 @@ class SemanticAnalyzer:
             return self.visit_identifier(node)
 
         raise SemanticError(
-            f"Unknown AST node: {type(node).__name__}"
+            f"Unknown AST node: {type(node).__name__}",
+            error_type="Unsupported AST Node",
         )
 
     # -------------------------
@@ -91,17 +129,18 @@ class SemanticAnalyzer:
     def visit_declaration(self, node):
 
         if self.symbol_table.lookup_current_scope(node.name):
-            raise SemanticError(
+            self.semantic_error(
                 f"Variable '{node.name}' "
-                f"already declared"
+                f"already declared",
+                "Duplicate Declaration",
+                node,
             )
-
-        initialized = node.initializer is not None
 
         self.symbol_table.declare(
             name=node.name,
             data_type=node.data_type,
-            initialized=initialized,
+            line=getattr(self.node_locations.get(id(node)), "line", None),
+            column=getattr(self.node_locations.get(id(node)), "column", None),
         )
 
         if node.initializer:
@@ -114,11 +153,14 @@ class SemanticAnalyzer:
                 node.data_type,
                 expression_type
             ):
-                raise SemanticError(
+                self.semantic_error(
                     f"Cannot assign {expression_type} "
                     f"to {node.data_type} variable "
-                    f"'{node.name}'"
+                    f"'{node.name}'",
+                    "Type Mismatch",
+                    node,
                 )
+            self.symbol_table.lookup_current_scope(node.name).initialized = True
 
     def visit_assignment(self, node):
 
@@ -127,9 +169,11 @@ class SemanticAnalyzer:
         )
 
         if symbol is None:
-            raise SemanticError(
+            self.semantic_error(
                 f"Variable '{node.name}' "
-                f"is not declared"
+                f"is not declared",
+                "Undeclared Variable",
+                node,
             )
 
         expression_type = self.visit(
@@ -140,10 +184,12 @@ class SemanticAnalyzer:
             symbol.data_type,
             expression_type
         ):
-            raise SemanticError(
+            self.semantic_error(
                 f"Cannot assign {expression_type} "
                 f"to {symbol.data_type} variable "
-                f"'{node.name}'"
+                f"'{node.name}'",
+                "Type Mismatch",
+                node,
             )
 
         symbol.initialized = True
@@ -158,8 +204,10 @@ class SemanticAnalyzer:
         )
 
         if condition_type != "bool":
-            raise SemanticError(
-                "If condition must be boolean"
+            self.semantic_error(
+                "If condition must be boolean",
+                "Invalid Condition",
+                node,
             )
 
         self.visit(node.then_branch)
@@ -174,8 +222,10 @@ class SemanticAnalyzer:
         )
 
         if condition_type != "bool":
-            raise SemanticError(
-                "While condition must be boolean"
+            self.semantic_error(
+                "While condition must be boolean",
+                "Invalid Condition",
+                node,
             )
 
         self.visit(node.body)
@@ -191,9 +241,11 @@ class SemanticAnalyzer:
         )
 
         if symbol is None:
-            raise SemanticError(
+            self.semantic_error(
                 f"Variable '{node.name}' "
-                f"is not declared"
+                f"is not declared",
+                "Undeclared Variable",
+                node,
             )
 
         return symbol.data_type
@@ -222,15 +274,19 @@ class SemanticAnalyzer:
         if node.operator in arithmetic_operators:
 
             if left_type not in ("int", "float"):
-                raise SemanticError(
+                self.semantic_error(
                     f"Operator '{node.operator}' "
-                    f"cannot be used with {left_type}"
+                    f"cannot be used with {left_type}",
+                    "Invalid Operand Type",
+                    node.left,
                 )
 
             if right_type not in ("int", "float"):
-                raise SemanticError(
+                self.semantic_error(
                     f"Operator '{node.operator}' "
-                    f"cannot be used with {right_type}"
+                    f"cannot be used with {right_type}",
+                    "Invalid Operand Type",
+                    node.right,
                 )
 
             if left_type == "float" or right_type == "float":
@@ -244,15 +300,19 @@ class SemanticAnalyzer:
                 left_type,
                 right_type
             ):
-                raise SemanticError(
+                self.semantic_error(
                     f"Cannot compare "
-                    f"{left_type} and {right_type}"
+                    f"{left_type} and {right_type}",
+                    "Type Mismatch",
+                    node.left,
                 )
 
             return "bool"
 
-        raise SemanticError(
-            f"Unknown operator '{node.operator}'"
+        self.semantic_error(
+            f"Unknown operator '{node.operator}'",
+            "Invalid Operator",
+            node,
         )
 
     def visit_unary(self, node):
@@ -267,9 +327,11 @@ class SemanticAnalyzer:
                 "int",
                 "float",
             ):
-                raise SemanticError(
+                self.semantic_error(
                     "Unary '-' requires "
-                    "a numeric value"
+                    "a numeric value",
+                    "Invalid Operand Type",
+                    node.operand,
                 )
 
             return operand_type
@@ -277,16 +339,20 @@ class SemanticAnalyzer:
         if node.operator == "!":
 
             if operand_type != "bool":
-                raise SemanticError(
+                self.semantic_error(
                     "Unary '!' requires "
-                    "a boolean value"
+                    "a boolean value",
+                    "Invalid Operand Type",
+                    node.operand,
                 )
 
             return "bool"
 
-        raise SemanticError(
+        self.semantic_error(
             f"Unknown unary operator "
-            f"'{node.operator}'"
+            f"'{node.operator}'",
+            "Invalid Operator",
+            node,
         )
 
     # -------------------------
@@ -301,8 +367,8 @@ class SemanticAnalyzer:
         if expected == actual:
             return True
 
-        # Allow int → float
-        if expected == "float" and actual == "int":
+        numeric_types = {"int", "float"}
+        if expected in numeric_types and actual in numeric_types:
             return True
 
         return False

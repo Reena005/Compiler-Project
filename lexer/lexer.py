@@ -1,6 +1,25 @@
 from lexer.token import Token, TokenType
 
 
+class LexicalError(SyntaxError):
+    def __init__(self, line, column, error_type, problematic, explanation):
+        self.line = line
+        self.column = column
+        self.error_type = error_type
+        self.problematic = problematic
+        self.explanation = explanation
+        super().__init__(str(self))
+
+    def __str__(self):
+        return (
+            f"Lexical Error\n"
+            f"Line: {self.line}\n"
+            f"Column: {self.column}\n"
+            f"{self.error_type}: {self.problematic}\n"
+            f"Explanation: {self.explanation}"
+        )
+
+
 class Lexer:
     KEYWORDS = {
         "int": TokenType.INT,
@@ -37,6 +56,7 @@ class Lexer:
         self.line = 1
         self.column = 1
         self.tokens = []
+        self.comment_count = 0
 
     def current_char(self):
         if self.position >= len(self.source):
@@ -89,6 +109,7 @@ class Lexer:
         # Current position is at the first '/'
         self.advance()
         self.advance()
+        self.comment_count += 1
 
         while self.current_char() is not None:
             if self.current_char() == "\n":
@@ -180,16 +201,22 @@ class Lexer:
                 return
 
             if char == "\n":
-                raise SyntaxError(
-                    f"Unterminated string at "
-                    f"line {start_line}, column {start_column}"
+                raise LexicalError(
+                    start_line,
+                    start_column,
+                    "Unterminated string",
+                    '"',
+                    "String literals cannot continue onto another line.",
                 )
 
             value += self.advance()
 
-        raise SyntaxError(
-            f"Unterminated string at "
-            f"line {start_line}, column {start_column}"
+        raise LexicalError(
+            start_line,
+            start_column,
+            "Unterminated string",
+            '"',
+            "String literal is missing its closing double quote.",
         )
 
     def tokenize(self):
@@ -285,9 +312,12 @@ class Lexer:
                 continue
 
             # Unknown character
-            raise SyntaxError(
-                f"Unexpected character {char!r} "
-                f"at line {start_line}, column {start_column}"
+            raise LexicalError(
+                start_line,
+                start_column,
+                "Unexpected character",
+                char,
+                f"Character {char!r} is not part of the MiniLang-X language.",
             )
 
         self.tokens.append(

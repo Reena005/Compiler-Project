@@ -7,16 +7,21 @@ class Symbol:
     data_type: str
     scope_level: int
     initialized: bool = False
+    line: int = None
+    column: int = None
 
 
 class SymbolTable:
     def __init__(self):
         self.scopes = [{}]
         self.scope_level = 0
+        self.scope_count = 1
+        self.symbols = []
 
     def enter_scope(self):
         self.scopes.append({})
         self.scope_level += 1
+        self.scope_count += 1
 
     def exit_scope(self):
         if self.scope_level == 0:
@@ -25,7 +30,14 @@ class SymbolTable:
         self.scopes.pop()
         self.scope_level -= 1
 
-    def declare(self, name, data_type, initialized=False):
+    def declare(
+        self,
+        name,
+        data_type,
+        initialized=False,
+        line=None,
+        column=None,
+    ):
         current_scope = self.scopes[-1]
 
         if name in current_scope:
@@ -39,9 +51,12 @@ class SymbolTable:
             data_type=data_type,
             scope_level=self.scope_level,
             initialized=initialized,
+            line=line,
+            column=column,
         )
 
         current_scope[name] = symbol
+        self.symbols.append(symbol)
 
         return symbol
 

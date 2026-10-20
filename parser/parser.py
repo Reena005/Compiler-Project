@@ -15,10 +15,58 @@ from syntax_tree.nodes import (
 )
 
 
+class ParserSyntaxError(SyntaxError):
+    def __init__(self, token, expected, source=None):
+        self.token = token
+        self.expected = expected
+        self.line = token.line
+        self.column = token.column
+        self.unexpected = (
+            "end of file"
+            if token.type == TokenType.EOF
+            else f"{token.value!r} ({token.type.name})"
+        )
+        self.source_context = None
+
+        if source is not None:
+            lines = source.split("\n")
+            if 1 <= self.line <= len(lines):
+                source_line = lines[self.line - 1].rstrip("\r")
+                prefix = source_line[:max(self.column - 1, 0)]
+                self.source_context = (
+                    f"{source_line.expandtabs(4)}\n"
+                    f"{' ' * len(prefix.expandtabs(4))}^"
+                )
+
+        super().__init__(str(self))
+
+    def __str__(self):
+        message = (
+            "Syntax Error\n"
+            f"Unexpected token: {self.unexpected}\n"
+            f"Expected: {self.expected}\n"
+            f"Line: {self.line}\n"
+            f"Column: {self.column}"
+        )
+
+        if self.source_context is not None:
+            message += f"\nSource:\n    {self.source_context.replace(chr(10), chr(10) + '    ')}"
+
+        return message
+
+
 class Parser:
-    def __init__(self, tokens):
+    def __init__(self, tokens, source=None):
         self.tokens = tokens
         self.position = 0
+        self.source = source
+
+    def syntax_error(self, expected, token=None):
+        raise ParserSyntaxError(
+            token or self.current_token(),
+            expected,
+            self.source,
+        )
 
     def current_token(self):
         if self.position >= len(self.tokens):
@@ -55,12 +103,20 @@ class Parser:
         token = self.current_token()
 
         if token.type != token_type:
-            raise SyntaxError(
-                f"Expected {token_type.name}, "
-                f"but found {token.type.name} "
-                f"({token.value!r}) "
-                f"at line {token.line}, column {token.column}"
-            )
+            expected = token_type.name
+            if token_type == TokenType.RPAREN:
+                expected = "RPAREN (')')"
+            elif token_type == TokenType.LPAREN:
+                expected = "LPAREN ('(')"
+            elif token_type == TokenType.LBRACE:
+                expected = "LBRACE ('{')"
+            elif token_type == TokenType.RBRACE:
+                expected = "RBRACE ('}')"
+            elif token_type == TokenType.SEMICOLON:
+                expected = "SEMICOLON (';')"
+            elif token_type == TokenType.ASSIGN:
+                expected = "ASSIGN ('=')"
+            self.syntax_error(expected, token)
 
         return self.advance()
 
@@ -103,10 +159,9 @@ class Parser:
 
         token = self.current_token()
 
-        raise SyntaxError(
-            f"Unexpected token {token.value!r} "
-            f"at line {token.line}, "
-            f"column {token.column}"
+        self.syntax_error(
+            "statement (declaration, assignment, if, while, or print)",
+            token,
         )
 
     def parse_declaration(self):
@@ -196,9 +251,7 @@ class Parser:
 
         while not self.check(TokenType.RBRACE):
             if self.check(TokenType.EOF):
-                raise SyntaxError(
-                    "Expected '}' before end of file"
-                )
+                self.syntax_error("RBRACE ('}')")
 
             statements.append(self.parse_statement())
 
@@ -332,10 +385,4 @@ class Parser:
 
             return expression
 
-        raise SyntaxError(
-            f"Expected expression, "
-            f"but found {token.type.name} "
-            f"({token.value!r}) "
-            f"at line {token.line}, "
-            f"column {token.column}"
-        )
+        self.syntax_error("expression", token)

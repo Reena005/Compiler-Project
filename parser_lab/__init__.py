@@ -16,6 +16,20 @@ from parser_lab.recursive_descent import (
     LeftRecursionReport,
     RDParseResult,
 )
+from parser_lab.lr_common import (
+    AugmentedGrammar,
+    LR0Item,
+    LR1Item,
+    LRAction,
+    LRConflict,
+    LRTraceStep,
+    LRParseResult,
+    LRTableResult,
+    LRParserEngine,
+)
+from parser_lab.slr1 import SLR1TableGenerator, SLR1Parser
+from parser_lab.clr1 import CLR1TableGenerator, CLR1Parser
+from parser_lab.lalr1 import LALR1TableGenerator, LALR1Parser
 
 __all__ = [
     "Grammar",
@@ -37,4 +51,20 @@ __all__ = [
     "LeftRecursionDetector",
     "LeftRecursionReport",
     "RDParseResult",
+    "AugmentedGrammar",
+    "LR0Item",
+    "LR1Item",
+    "LRAction",
+    "LRConflict",
+    "LRTraceStep",
+    "LRParseResult",
+    "LRTableResult",
+    "LRParserEngine",
+    "SLR1TableGenerator",
+    "SLR1Parser",
+    "CLR1TableGenerator",
+    "CLR1Parser",
+    "LALR1TableGenerator",
+    "LALR1Parser",
 ]
+

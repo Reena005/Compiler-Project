@@ -22,6 +22,7 @@ class ParseTreeNode:
     def to_dict(self) -> dict:
         return {
             "symbol": self.symbol,
+            "label": self.symbol,
             "is_terminal": self.is_terminal,
             "children": [c.to_dict() for c in self.children],
         }

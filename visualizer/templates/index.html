@@ -26,7 +26,7 @@
             </div>
         </div>
 
-        <!-- Top-level Navigation Switcher: Compiler Pipeline vs Parser Lab -->
+        <!-- Top-level Navigation Switcher: Compiler Pipeline vs Top-Down Lab vs Bottom-Up Lab -->
         <nav class="header-nav-tabs" role="tablist" aria-label="Main Workspaces">
             <button id="nav-pipeline-tab" class="workspace-tab active" type="button" role="tab" aria-selected="true">
                 <svg class="workspace-tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -38,8 +38,16 @@
                 <svg class="workspace-tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                 </svg>
-                <span>Parser Lab</span>
+                <span>Top-Down Lab</span>
                 <span class="workspace-pill-phase">Phase 2</span>
+            </button>
+            <button id="nav-bottom-up-tab" class="workspace-tab" type="button" role="tab" aria-selected="false">
+                <svg class="workspace-tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    <path d="M7 8h10M7 12h10M7 16h10"></path>
+                </svg>
+                <span>Bottom-Up Lab</span>
+                <span class="workspace-pill-phase" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Phase 3</span>
             </button>
         </nav>
 
@@ -427,6 +435,163 @@ T -> id</textarea>
                         </svg>
                         <h3>Ready for Grammar &amp; Top-Down Parsing Analysis</h3>
                         <p>Configure grammar rules and input tokens on the left. Click <strong>Generate Table</strong> to compute the LL(1) predictive table, or <strong>Parse Input</strong> to trace top-down execution.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Workspace 3: Dedicated Bottom-Up Parser Lab (Phase 3: SLR(1), CLR(1), LALR(1)) -->
+    <div id="bottom-up-workspace" class="workspace-content-pane" style="display: none;">
+        <!-- Phase 3 Informational Banner -->
+        <div class="parser-lab-banner">
+            <div class="banner-title-row">
+                <span class="banner-tag" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">PHASE 3: BOTTOM-UP PARSING</span>
+                <h2 class="banner-title">SLR(1), CLR(1) &amp; LALR(1) Shift-Reduce Parsing Lab</h2>
+            </div>
+            <p class="banner-desc">
+                Interactive Bottom-Up LR Parsing Workbench. Construct LR(0) and LR(1) canonical item sets, explore state transition graphs, generate ACTION and GOTO tables with conflict detection, compare SLR(1) vs CLR(1) vs LALR(1) state merging, and execute stack-driven parsing traces with parse trees.
+            </p>
+        </div>
+
+        <div class="parser-lab-grid">
+            <!-- Left Column: Grammar Editor & Configuration -->
+            <section class="parser-lab-input-panel panel" aria-label="Bottom-Up Grammar Editor">
+                <div class="panel-header">
+                    <div class="panel-header-left">
+                        <span class="panel-section-tag" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">INPUT</span>
+                        <h2 class="panel-title">Grammar &amp; LR Engine</h2>
+                    </div>
+                    <div class="source-format-pill">LR CFG Notation</div>
+                </div>
+
+                <div class="grammar-toolbar">
+                    <div class="grammar-toolbar-row">
+                        <div class="toolbar-field">
+                            <label for="bu-grammar-preset-select" class="field-label">Grammar Presets:</label>
+                            <select id="bu-grammar-preset-select" class="form-select" aria-label="Select Bottom-Up Grammar Preset">
+                                <option value="bu_expr" selected>1. Left-Recursive Expression (E -> E+T | T, T -> T*F | F, F -> (E) | id)</option>
+                                <option value="bu_classic_lalr">2. Classic CLR(1) vs LALR(1) Grammar (S -> aAd | bAe | aBe | bBd)</option>
+                                <option value="bu_slr_conflict">3. SLR(1) Conflict Grammar (S -> L = R | R, L -> *R | id, R -> L)</option>
+                                <option value="bu_simple_epsilon">4. Epsilon Derivations (S -> a A b, A -> eps)</option>
+                                <option value="bu_custom">Custom Grammar</option>
+                            </select>
+                        </div>
+
+                        <div class="toolbar-field">
+                            <label for="bu-grammar-start-symbol" class="field-label">Start Symbol:</label>
+                            <input id="bu-grammar-start-symbol" type="text" class="form-input" value="E" placeholder="Auto-detect (first LHS)" aria-label="Grammar Start Symbol">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grammar Editor Frame: Line Numbers + Textarea -->
+                <div class="editor-frame grammar-editor-frame">
+                    <pre id="bu-grammar-line-numbers" class="line-numbers" aria-hidden="true">1
+2
+3</pre>
+                    <textarea id="bu-grammar-editor" spellcheck="false" aria-label="Bottom-Up Grammar rules" autocapitalize="off" autocomplete="off">E -> E + T | T
+T -> T * F | F
+F -> ( E ) | id</textarea>
+                </div>
+
+                <!-- Input Tokens & Bottom-Up Parser Engine Controls -->
+                <div class="grammar-toolbar" style="border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);">
+                    <div class="grammar-toolbar-row">
+                        <div class="toolbar-field">
+                            <label for="bu-parser-input-string" class="field-label">Input Tokens / String:</label>
+                            <input id="bu-parser-input-string" type="text" class="form-input" value="id + id * id" placeholder="e.g. id + id * id or ( id + id ) * id" aria-label="Input Tokens for Bottom-Up Parsing">
+                        </div>
+
+                        <div class="toolbar-field">
+                            <label for="bu-parser-engine-select" class="field-label">Bottom-Up LR Engine:</label>
+                            <select id="bu-parser-engine-select" class="form-select" aria-label="Select Bottom-Up LR Engine">
+                                <option value="slr1" selected>SLR(1) Simple LR Parser</option>
+                                <option value="clr1">CLR(1) Canonical LR(1) Parser</option>
+                                <option value="lalr1">LALR(1) Look-Ahead LR(1) Parser</option>
+                            </select>
+                        </div>
+                    </div>
+                    <span class="field-hint" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Separated by whitespace or compact terminals matching grammar tokens (e.g. <code>id + id * id</code>).</span>
+                </div>
+
+                <div class="editor-action-bar grammar-action-bar">
+                    <button id="bu-btn-validate-grammar" class="btn btn-secondary" type="button" title="Validate grammar syntax and structure">
+                        <span>Validate</span>
+                    </button>
+                    <button id="bu-btn-generate-items" class="btn btn-secondary" type="button" title="Generate canonical LR item sets and state transition diagram">
+                        <span class="btn-icon" aria-hidden="true">⚙</span>
+                        <span>Item Sets</span>
+                    </button>
+                    <button id="bu-btn-generate-table" class="btn btn-secondary" type="button" title="Generate ACTION and GOTO tables with conflict detection">
+                        <span>Generate Table</span>
+                    </button>
+                    <button id="bu-btn-parse-input" class="btn btn-primary" type="button" title="Parse input tokens with selected bottom-up LR engine">
+                        <span class="btn-icon" aria-hidden="true">▶</span>
+                        <span>Parse Input</span>
+                    </button>
+                </div>
+
+                <div class="compiler-arch-card">
+                    <div class="arch-card-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <span>Bottom-Up LR Parsing Principles</span>
+                    </div>
+                    <div class="arch-tier-list">
+                        <div class="arch-tier-item">
+                            <span class="tier-badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">SLR(1)</span>
+                            <span class="tier-desc">Constructs LR(0) items. Uses FOLLOW(A) sets for reduce actions. Simple but susceptible to false shift/reduce conflicts.</span>
+                        </div>
+                        <div class="arch-tier-item">
+                            <span class="tier-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">CLR(1)</span>
+                            <span class="tier-desc">Canonical LR(1) items carry specific lookahead tokens [A -> α • β, a]. Conflict-free for all LR(1) grammars, but has more states.</span>
+                        </div>
+                        <div class="arch-tier-item">
+                            <span class="tier-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">LALR(1)</span>
+                            <span class="tier-desc">Merges CLR(1) states sharing identical LR(0) cores, combining their lookaheads. Same state count as SLR(1); may introduce reduce/reduce conflicts.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Diagnostics, Items, Diagram, Tables, Traces & Trees -->
+            <section class="parser-lab-output-panel panel" aria-label="Bottom-Up Analysis Results">
+                <div class="panel-header">
+                    <div class="panel-header-left">
+                        <span class="phase-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">BOTTOM-UP</span>
+                        <h2 class="panel-title" id="bu-view-title">Bottom-Up LR Parsing</h2>
+                    </div>
+                    <div id="bu-status-pill" class="compiler-status">
+                        <span class="status-dot" aria-hidden="true"></span>
+                        <span id="bu-status-text">Ready</span>
+                    </div>
+                </div>
+
+                <!-- Segmented Tab Navigation for Bottom-Up Views -->
+                <nav class="parser-lab-tab-nav" aria-label="Bottom-Up Parser Lab Views">
+                    <button class="lab-tab-btn active" type="button" data-bu-view="grammar" id="bu-tab-grammar">Grammar</button>
+                    <button class="lab-tab-btn" type="button" data-bu-view="items" id="bu-tab-items">Item Sets</button>
+                    <button class="lab-tab-btn" type="button" data-bu-view="graph" id="bu-tab-graph">Transition Diagram</button>
+                    <button class="lab-tab-btn" type="button" data-bu-view="action-table" id="bu-tab-action">ACTION Table</button>
+                    <button class="lab-tab-btn" type="button" data-bu-view="goto-table" id="bu-tab-goto">GOTO Table</button>
+                    <button class="lab-tab-btn" type="button" data-bu-view="conflicts" id="bu-tab-conflicts">Conflicts</button>
+                    <button class="lab-tab-btn" type="button" data-bu-view="trace" id="bu-tab-trace">Parsing Trace</button>
+                    <button class="lab-tab-btn" type="button" data-bu-view="tree" id="bu-tab-tree">Parse Tree</button>
+                    <button class="lab-tab-btn" type="button" data-bu-view="merged" id="bu-tab-merged" style="display: none;">LALR Merged States</button>
+                </nav>
+
+                <div id="bu-content" class="stage-content">
+                    <div class="parser-lab-empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                            <path d="M7 8h10M7 12h10M7 16h10"></path>
+                        </svg>
+                        <h3>Ready for Bottom-Up Parsing Analysis</h3>
+                        <p>Configure grammar rules and input tokens on the left. Click <strong>Generate Item Sets</strong> to view canonical states &amp; transitions, <strong>Generate Table</strong> to view ACTION/GOTO tables, or <strong>Parse Input</strong> to trace shift-reduce execution.</p>
                     </div>
                 </div>
             </section>

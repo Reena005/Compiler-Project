@@ -31,7 +31,7 @@
     const grammarStatusText = document.getElementById("grammar-status-text");
     const parserLabViewTitle = document.getElementById("parser-lab-view-title");
     const parserLabContent = document.getElementById("parser-lab-content");
-    const tabNav = document.querySelector(".parser-lab-tab-nav");
+    const tabNav = document.querySelector("#parser-lab-workspace .parser-lab-tab-nav");
 
     // Built-in Grammar Presets
     const grammarPresets = {
@@ -180,7 +180,7 @@
     // Tab Switching
     function setActiveTab(tabKey) {
         state.activeTab = tabKey;
-        const tabBtns = document.querySelectorAll(".lab-tab-btn");
+        const tabBtns = document.querySelectorAll("#parser-lab-workspace .lab-tab-btn");
         tabBtns.forEach(btn => {
             if (btn.getAttribute("data-view") === tabKey) {
                 btn.classList.add("active");
@@ -234,7 +234,11 @@
             throw new Error("Invalid response received from parser lab service.");
         }
 
-        if (!response.ok && data.error) {
+        if (!response.ok) {
+            throw new Error(data && data.error ? data.error : `Request failed with status ${response.status}`);
+        }
+
+        if (data && data.success === false && data.error) {
             throw new Error(data.error);
         }
 
@@ -957,9 +961,7 @@
                 });
 
                 state.lastLL1Parse = data;
-                if (data.parse_tree) {
-                    state.lastParseTree = data.parse_tree;
-                }
+                state.lastParseTree = data.parse_tree || null;
 
                 if (data.accepted) {
                     setGrammarStatus("success", "Accepted");
@@ -977,9 +979,7 @@
                 });
 
                 state.lastRDParse = data;
-                if (data.parse_tree) {
-                    state.lastParseTree = data.parse_tree;
-                }
+                state.lastParseTree = data.parse_tree || null;
 
                 if (data.accepted) {
                     setGrammarStatus("success", "Accepted");
@@ -999,6 +999,19 @@
                 </div>
             `;
         }
+    }
+
+    if (btnValidateGrammar) {
+        btnValidateGrammar.addEventListener("click", handleValidateGrammar);
+    }
+    if (btnComputeFirstFollow) {
+        btnComputeFirstFollow.addEventListener("click", handleComputeFirstFollow);
+    }
+    if (btnGenerateLL1Table) {
+        btnGenerateLL1Table.addEventListener("click", handleGenerateLL1Table);
+    }
+    if (btnParseInput) {
+        btnParseInput.addEventListener("click", handleParseInput);
     }
 
     // ========================================================================
